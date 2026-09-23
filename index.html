@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="pulse - anonymous peer-to-peer chat in your browser. No servers, no logs, no history." />
+  <meta name="theme-color" content="#5b5bd6" />
+  <title>pulse - p2p chat in your browser</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%235b5bd6'/%3E%3Cpath d='M16 6l2.2 6.1L24 8.7l-1.4 7.4 7.4 1.4-7.4 1.4 1.4 7.4-5.8-3.4-2.2 6.1-2.2-6.1-5.8 3.4 1.4-7.4L4.8 17.5l7.4-1.4L10.8 8.7l5.8 3.4z' fill='%23fff'/%3E%3C/svg%3E" />
+  <style>
+    :root {
+      --bg: #f4f5f7; --panel: #fff; --text: #17181c; --muted: #8b919c;
+      --accent: #5b5bd6; --accent-2: #4545c0; --border: #e6e8ec;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg); color: var(--text);
+    }
+    .app {
+      display: flex; flex-direction: column;
+      height: 100vh; height: 100dvh;
+      max-width: 720px; margin: 0 auto; width: 100%;
+    }
+    .topbar {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 16px; background: var(--panel); border-bottom: 1px solid var(--border);
+    }
+    .logo { font-weight: 800; font-size: 16px; letter-spacing: .02em; }
+    .peer {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px; color: var(--muted);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 40%;
+    }
+    .status {
+      margin-left: auto; display: flex; align-items: center; gap: 6px;
+      font-size: 12px; color: var(--muted);
+    }
+    .status .dot { width: 8px; height: 8px; border-radius: 50%; background: #c6c9d0; }
+    .status.on { color: #2bb673; }
+    .status.on .dot { background: #2bb673; }
+    .restart {
+      border: 1px solid var(--border); background: #fff; color: var(--text);
+      font-size: 12px; font-weight: 600; padding: 6px 10px; border-radius: 8px; cursor: pointer;
+    }
+    .restart:hover { border-color: var(--accent); color: var(--accent); }
+    .chat {
+      flex: 1; overflow-y: auto; padding: 18px 16px;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .row { display: flex; }
+    .row.mine { justify-content: flex-end; }
+    .row.theirs { justify-content: flex-start; }
+    .row.sys { justify-content: center; }
+    .bubble {
+      max-width: 78%; padding: 9px 14px; border-radius: 16px;
+      font-size: 14.5px; line-height: 1.45;
+      word-break: break-word; white-space: pre-wrap;
+      animation: pop .12s ease;
+    }
+    .row.mine .bubble { background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
+    .row.theirs .bubble { background: var(--panel); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+    .sys-text { font-size: 12px; color: var(--muted); background: #eceef1; padding: 4px 12px; border-radius: 999px; }
+    @keyframes pop { from { transform: scale(.96); opacity: .6; } to { transform: scale(1); opacity: 1; } }
+    .landing {
+      display: flex; flex-direction: column; gap: 14px;
+      margin: auto; width: 100%; max-width: 460px; padding: 24px 0;
+    }
+    .landing h1 { font-size: 20px; margin: 0; }
+    .landing p { color: var(--muted); font-size: 14px; margin: 0; line-height: 1.55; }
+    .linkrow { display: flex; gap: 8px; }
+    .linkrow input {
+      flex: 1; min-width: 0;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12.5px; padding: 10px 12px;
+      border: 1px solid var(--border); border-radius: 10px;
+      background: #fff; color: var(--text); outline: none;
+    }
+    .btn {
+      border: none; border-radius: 10px; padding: 10px 16px;
+      font-size: 13.5px; font-weight: 600;
+      background: var(--accent); color: #fff; white-space: nowrap; cursor: pointer;
+    }
+    .btn:hover { background: var(--accent-2); }
+    .btn.green { background: #2bb673; }
+    .btn.green:hover { background: #249a61; }
+    .share { display: flex; gap: 8px; }
+    .share a {
+      flex: 1; text-align: center; text-decoration: none; padding: 9px;
+      border: 1px solid var(--border); border-radius: 10px;
+      color: var(--text); font-size: 13px; font-weight: 600; background: #fff;
+    }
+    .share a:hover { border-color: var(--accent); color: var(--accent); }
+    .features { display: flex; flex-direction: column; gap: 8px; }
+    .features div {
+      background: #fff; border: 1px solid var(--border); border-radius: 10px;
+      padding: 12px 14px; font-size: 13px; color: var(--muted); line-height: 1.5;
+    }
+    .features strong { display: block; color: var(--text); margin-bottom: 2px; }
+    .transfers {
+      display: flex; flex-direction: column; gap: 8px;
+      padding: 10px 16px; background: var(--panel); border-top: 1px solid var(--border);
+    }
+    .transfer {
+      display: flex; align-items: center; gap: 12px;
+      border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; background: #fff;
+    }
+    .meta { flex: 1; min-width: 0; }
+    .name { font-size: 13.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .small { font-size: 12px; color: var(--muted); }
+    .progress { width: 100px; height: 6px; background: #eceef1; border-radius: 999px; overflow: hidden; }
+    .progress .bar { height: 100%; background: var(--accent); border-radius: 999px; transition: width .15s; }
+    .dl {
+      border: none; border-radius: 8px; padding: 8px 12px;
+      font-size: 12.5px; font-weight: 600; background: var(--accent); color: #fff; cursor: pointer;
+    }
+    .dl:hover { background: var(--accent-2); }
+    .inputbar {
+      display: flex; gap: 8px; padding: 12px 16px;
+      background: var(--panel); border-top: 1px solid var(--border);
+    }
+    .hidden { display: none; }
+    .iconbtn {
+      flex: none; display: flex; align-items: center; justify-content: center;
+      width: 44px; height: 44px; border: 1px solid var(--border); border-radius: 12px;
+      background: #fff; color: var(--muted); cursor: pointer;
+    }
+    .iconbtn:hover { color: var(--accent); border-color: var(--accent); }
+    .rowform { flex: 1; display: flex; gap: 8px; min-width: 0; }
+    .text-input {
+      flex: 1; min-width: 0; padding: 12px 14px;
+      border: 1px solid var(--border); border-radius: 12px;
+      font-size: 14.5px; outline: none; background: #fff; color: var(--text);
+    }
+    .text-input:focus { border-color: var(--accent); }
+    .send {
+      flex: none; display: flex; align-items: center; justify-content: center;
+      width: 44px; height: 44px; border: none; border-radius: 12px;
+      background: var(--accent); color: #fff; cursor: pointer;
+    }
+    .send:disabled { opacity: .35; cursor: not-allowed; }
+    .send:not(:disabled):hover { background: var(--accent-2); }
+  </style>
+</head>
+<body>
+  <div class="app" x-data="chat()" x-init="init()">
+    <header class="topbar">
+      <span class="logo">pulse</span>
+      <span class="peer" x-show="connected" x-text="'#' + peerId"></span>
+      <button class="restart" x-show="!connected && messages.length > 0" @click="reset">Start new chat</button>
+      <span class="status" :class="connected ? 'on' : ''">
+        <span class="dot"></span>
+        <span x-text="connected ? 'connected' : 'offline'"></span>
+      </span>
+    </header>
+
+    <main class="chat" x-ref="chat">
+      <div class="landing" x-show="!connected && messages.length === 0">
+        <h1>Start chatting</h1>
+        <p>Send this link to the person you want to talk to. Everything runs directly between browsers - no accounts, no servers, no logs.</p>
+        <div class="linkrow">
+          <input x-ref="linkInput" :value="linkUrl()" readonly @click="$event.target.select()" />
+          <button class="btn" :class="copied ? 'green' : ''" @click="copyLink" x-text="copied ? 'Copied!' : 'Copy link'"></button>
+        </div>
+        <div class="share">
+          <a :href="'https://telegram.me/share/url?url=' + encodeURIComponent(linkUrl())" target="_blank" rel="noopener">Telegram</a>
+          <a :href="'https://wa.me/?text=' + encodeURIComponent(linkUrl())" target="_blank" rel="noopener">WhatsApp</a>
+          <a :href="'mailto:?subject=&body=' + encodeURIComponent(linkUrl())">E-Mail</a>
+        </div>
+        <div class="features">
+          <div><strong>Peer to peer</strong> Direct connection between browsers, nothing is stored on any server.</div>
+          <div><strong>Anonymous</strong> No registration, no identity, just a random link.</div>
+          <div><strong>No history</strong> Everything disappears when you close the tab.</div>
+        </div>
+      </div>
+
+      <template x-for="(msg, i) in messages" :key="i">
+        <div class="row" :class="msg.isSystem ? 'sys' : msg.isSender ? 'mine' : 'theirs'">
+          <template x-if="msg.isSystem">
+            <span class="sys-text" x-text="msg.text"></span>
+          </template>
+          <template x-if="!msg.isSystem">
+            <div class="bubble" x-text="msg.text"></div>
+          </template>
+        </div>
+      </template>
+    </main>
+
+    <div class="transfers" x-show="Object.keys(fileTransfers).length > 0">
+      <template x-for="(t, i) in Object.values(fileTransfers)" :key="i">
+        <div class="transfer">
+          <div class="meta">
+            <div class="name" x-text="t.name"></div>
+            <div class="small" x-text="(t.isComplete ? 'received ' : t.receivedChunks + '/' + t.totalChunks + ' chunks - ') + formatFileSize(t.size)"></div>
+          </div>
+          <div class="progress">
+            <div class="bar" :style="'width:' + t.progress + '%'"></div>
+          </div>
+          <button class="dl" x-show="t.isComplete" @click="downloadFile(t)">Download</button>
+        </div>
+      </template>
+    </div>
+
+    <footer class="inputbar" x-show="connected">
+      <input type="file" class="hidden" x-ref="fileInput" multiple @change="handleFileSelect" />
+      <button type="button" class="iconbtn" @click="$refs.fileInput.click()" title="Attach file">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+      </button>
+      <form class="rowform" @submit.prevent="sendMessage">
+        <input class="text-input" type="text" x-model="input" x-ref="input"
+               placeholder="Type a message" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" />
+        <button type="submit" class="send" :disabled="!input.trim()" title="Send">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        </button>
+      </form>
+    </footer>
+  </div>
+
+  <script>
+    function chat() {
+      let peer = null;
+      let connection = null;
+      const CHUNK_SIZE = 16384;
+      const config = {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' }
+        ]
+      };
+
+      const generatePeerId = () => {
+        if (window.crypto && window.crypto.getRandomValues) {
+          const array = new Uint8Array(16);
+          window.crypto.getRandomValues(array);
+          return Array.from(array, b => b.toString(36)).join('').substring(0, 22);
+        }
+        return Math.random().toString(36).substring(2, 24);
+      };
+
+      const generateFileId = () => Math.random().toString(36).substring(2, 11) + Date.now().toString(36);
+
+      const formatFileSize = bytes => {
+        if (!bytes) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+      };
+
+      return {
+        peerId: '',
+        messages: [],
+        connected: false,
+        copied: false,
+        input: '',
+        fileTransfers: {},
+
+        init() {
+          this.peerId = generatePeerId();
+          peer = new Peer(this.peerId, { config });
+          const target = window.location.hash.substring(1);
+          if (target) this.connect(target);
+          else this.createPeer();
+        },
+
+        createPeer() {
+          peer.on('connection', c => this.setupConnection(c));
+          peer.on('error', err => console.log('pulse error:', err));
+        },
+
+        connect(targetId) {
+          peer.on('open', id => {
+            this.saveMessage('Created Peer: ' + id, true, true);
+            const c = peer.connect(targetId);
+            this.setupConnection(c, targetId);
+            setTimeout(() => {
+              if (!this.connected) {
+                this.saveMessage('Peer not found', true, true);
+                this.messages = [];
+              }
+            }, 8000);
+          });
+        },
+
+        setupConnection(c, targetId) {
+          connection = c;
+          c.on('open', () => {
+            this.connected = true;
+            this.saveMessage('Connected to Peer' + (targetId ? ': ' + targetId : ''), true, true);
+          });
+          c.on('data', data => {
+            if (typeof data === 'string') this.saveMessage(data, false);
+            else this.handleFileMessage(data);
+          });
+          c.on('close', () => {
+            this.connected = false;
+            this.saveMessage('Peer has left the chat', true, true);
+          });
+        },
+
+        linkUrl() {
+          return location.href.split('#')[0] + '#' + this.peerId;
+        },
+
+        copyLink() {
+          const done = () => {
+            this.copied = true;
+            setTimeout(() => (this.copied = false), 2000);
+          };
+          const fallback = () => {
+            const el = this.$refs.linkInput;
+            el.focus();
+            el.select();
+            try { document.execCommand('copy'); } catch (e) {}
+            done();
+          };
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(this.linkUrl()).then(done).catch(fallback);
+          } else fallback();
+        },
+
+        reset() {
+          this.messages = [];
+          this.fileTransfers = {};
+        },
+
+        sendMessage() {
+          const msg = this.input.trim();
+          if (!msg || !connection) return;
+          this.saveMessage(msg, true);
+          connection.send(msg);
+          this.input = '';
+        },
+
+        handleFileSelect(event) {
+          const files = event.target.files;
+          if (!files || !connection) return;
+          Array.from(files).forEach(f => this.sendFile(f));
+          event.target.value = '';
+        },
+
+        async sendFile(file) {
+          const fileId = generateFileId();
+          const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+          connection.send({
+            type: 'file-start', fileId, fileName: file.name,
+            fileSize: file.size, fileType: file.type, totalChunks
+          });
+          this.saveMessage('Sending file: ' + file.name + ' (' + formatFileSize(file.size) + ')', true, true);
+
+          const buffer = await file.arrayBuffer();
+          for (let i = 0; i < totalChunks; i++) {
+            const start = i * CHUNK_SIZE;
+            const end = Math.min(start + CHUNK_SIZE, file.size);
+            connection.send({ type: 'file-chunk', fileId, chunkIndex: i, chunk: buffer.slice(start, end) });
+          }
+          connection.send({ type: 'file-end', fileId });
+          this.saveMessage('File sent: ' + file.name, true, true);
+        },
+
+        handleFileMessage(msg) {
+          const transfer = this.fileTransfers[msg.fileId];
+          switch (msg.type) {
+            case 'file-start':
+              this.fileTransfers[msg.fileId] = {
+                id: msg.fileId,
+                name: msg.fileName,
+                size: msg.fileSize,
+                type: msg.fileType,
+                chunks: new Array(msg.totalChunks),
+                totalChunks: msg.totalChunks,
+                receivedChunks: 0,
+                isComplete: false,
+                progress: 0
+              };
+              this.saveMessage('Receiving file: ' + msg.fileName + ' (' + formatFileSize(msg.fileSize) + ')', false, true);
+              break;
+            case 'file-chunk':
+              if (transfer && msg.chunk) {
+                transfer.chunks[msg.chunkIndex] = msg.chunk;
+                transfer.receivedChunks++;
+                transfer.progress = Math.round((transfer.receivedChunks / transfer.totalChunks) * 100);
+              }
+              break;
+            case 'file-end':
+              if (transfer) {
+                transfer.isComplete = true;
+                transfer.progress = 100;
+                this.saveMessage('File received: ' + transfer.name, false, true);
+              }
+              break;
+          }
+        },
+
+        downloadFile(transfer) {
+          const size = transfer.chunks.reduce((sum, c) => sum + c.byteLength, 0);
+          const combined = new Uint8Array(size);
+          let offset = 0;
+          transfer.chunks.forEach(c => {
+            combined.set(new Uint8Array(c), offset);
+            offset += c.byteLength;
+          });
+          const blob = new Blob([combined], { type: transfer.type });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = transfer.name;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          delete this.fileTransfers[transfer.id];
+        },
+
+        formatFileSize,
+
+        saveMessage(text, isSender, isSystem = false) {
+          this.messages.push({ text, isSender, isSystem });
+          this.$nextTick(() => {
+            const el = this.$refs.chat;
+            if (el) el.scrollTop = el.scrollHeight;
+          });
+        }
+      };
+    }
+  </script>
+  <script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js"></script>
+  <script src="https://unpkg.com/alpinejs@3.14.9/dist/cdn.min.js" defer></script>
+</body>
+</html>
