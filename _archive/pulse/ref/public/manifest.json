@@ -1,0 +1,13 @@
+{
+    "lang": "en",
+    "name": "otr.to",
+    "short_name": "otr.to",
+    "scope": "/",
+    "display": "standalone",
+    "start_url": "/?source=pwa",
+    "theme_color": "#00d1b2",
+    "background_color": "#ffffff",
+    "description": "A secure p2p chat in your web browser.",
+    "orientation": "portrait",
+    "prefer_related_applications": false
+}
