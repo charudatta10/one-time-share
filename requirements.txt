@@ -1,0 +1,6 @@
+flask>=3.0
+flask-sqlalchemy>=3.1
+flask-login>=0.6.3
+flask-migrate>=4.0
+pycryptodome>=3.20
+python-dotenv>=1.0

@@ -27,6 +27,8 @@ One Time File Sharing — upload a file and share a download link that expires a
 
 ## Documentation 🗎
 
+See the [documentation](docs/index.md) for the overview, quickstart and project layout.
+
 ## What is this?
 
 A lightweight Flask web app for one-time file sharing. Files are uploaded and

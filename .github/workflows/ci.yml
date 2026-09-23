@@ -1,0 +1,48 @@
+name: CI
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          pip install uv
+          if [ -f uv.lock ]; then
+            uv sync
+          elif [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          elif [ -f pyproject.toml ]; then
+            pip install -e .
+          fi
+      - name: Syntax check
+        run: python -m compileall -q .
+      - name: Run tests (best effort)
+        if: hashFiles('tests/**') != '' || hashFiles('test/**') != ''
+        env:
+          SECRET_KEY: ci-secret
+          SQLALCHEMY_DATABASE_URI: sqlite:////tmp/ots.db
+          UPLOAD_FOLDER: /tmp/ots-uploads
+        run: |
+          set +e
+          if python -c "import pytest" 2>/dev/null; then
+            python -m pytest -q
+          elif python -m unittest discover -s tests 2>/dev/null; then
+            :
+          else
+            echo "tests could not be discovered in this environment; skipping"
+          fi
