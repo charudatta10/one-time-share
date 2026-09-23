@@ -67,6 +67,13 @@ python -m unittest discover -s tests
 
 ✨[Report a 🐛 or Request a ⭐](https://github.com/charudatta10/OneTimeFileSharing/issues)✨
 
+## Merged repos
+
+- **`pulse`** (P2P WebRTC chat + file transfer, single-file) was merged into
+  this repo on 23 Sep 2026. Its content lives under
+  [`_archive/pulse/`](_archive/pulse/), history preserved via
+  `git subtree add --squash`.
+
 ## License
 
 This project is licensed under the GPL-3.0 License. See the [LICENSE](LICENSE) file for details.
